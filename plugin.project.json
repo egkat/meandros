@@ -6,7 +6,7 @@
       "$path": "plugin/src"
     },
     "Packages": {
-      "$path": "plugin/Packages"
+      "$path": "Packages"
     },
     "Version": {
       "$path": "plugin/Version.txt"
