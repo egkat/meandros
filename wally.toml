@@ -1,0 +1,13 @@
+[package]
+name = "emichaelg/meandros"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+React = "jsdotlua/react@17.2.1"
+ReactRoblox = "jsdotlua/react-roblox@17.2.1"
+Sift = "csqrl/sift@0.0.11"
+Ripple = "littensy/ripple@0.10.2"
+Charm = "littensy/charm@0.10.0"
+ReactCharm = "littensy/react-charm@0.3.0"

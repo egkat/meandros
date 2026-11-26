@@ -1,0 +1,15 @@
+{
+  "name": "Meandros",
+  "tree": {
+    "$className": "Folder",
+    "Plugin": {
+      "$path": "plugin/src"
+    },
+    "Packages": {
+      "$path": "plugin/Packages"
+    },
+    "Version": {
+      "$path": "plugin/Version.txt"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+Packages/
+node_modules/
+build/
+*.rbxm
+.DS_Store
+sourcemap.json
+.claude/
+Commands.txt

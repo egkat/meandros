@@ -1,0 +1,181 @@
+--!strict
+local GridTypes = require("./GridTypes")
+
+type Wall = GridTypes.Wall
+type Cell = GridTypes.Cell
+type GridConfigs = GridTypes.GridConfigs
+type NeighborEntry = GridTypes.NeighborEntry
+
+local Grid = {}
+
+local OPPOSITE_MAPPING: { [Wall]: Wall } = {
+	North = "South",
+	South = "North",
+	East = "West",
+	West = "East",
+}
+
+local DIRECTION_VECTORS: { { direction: Wall, deltaX: number, deltaY: number } } = {
+	{ direction = "North", deltaX = 0, deltaY = -1 },
+	{ direction = "South", deltaX = 0, deltaY = 1 },
+	{ direction = "East", deltaX = 1, deltaY = 0 },
+	{ direction = "West", deltaX = -1, deltaY = 0 },
+}
+
+local DELTA_MAPPING: { [Wall]: { deltaX: number, deltaY: number } } = {
+	North = { deltaX = 0, deltaY = -1 },
+	South = { deltaX = 0, deltaY = 1 },
+	East = { deltaX = 1, deltaY = 0 },
+	West = { deltaX = -1, deltaY = 0 },
+}
+
+Grid.OPPOSITE_MAPPING = OPPOSITE_MAPPING
+Grid.DIRECTION_VECTORS = DIRECTION_VECTORS
+Grid.DELTA_MAPPING = DELTA_MAPPING
+
+function Grid.buildCell(row: number, column: number): Cell
+	return {
+		row = row,
+		column = column,
+		walls = { North = true, South = true, East = true, West = true },
+		visited = false,
+	}
+end
+
+function Grid.buildGrid(configs: GridConfigs): { Cell }
+	assert(typeof(configs.width) == "number", `[Grid]: Width must be a number`)
+	assert(typeof(configs.height) == "number", `[Grid]: Height must be a number`)
+	assert(configs.width % 1 == 0, `[Grid]: Width must be a positive integer [1, 2, 3, ...]`)
+	assert(configs.height % 1 == 0, `[Grid]: Height must be a positive integer [1, 2, 3, ...]`)
+
+	local grid = {}
+
+	for row = 1, configs.height do
+		for column = 1, configs.width do
+			table.insert(grid, Grid.buildCell(row, column))
+		end
+	end
+
+	return grid
+end
+
+function Grid.getCell(grid: { Cell }, configs: GridConfigs, row: number, column: number): Cell?
+	assert(typeof(grid) == "table", `[Grid]: grid must be a table`)
+	assert(typeof(configs.width) == "number", `[Grid]: Width must be a number`)
+	assert(typeof(configs.height) == "number", `[Grid]: Height must be a number`)
+	assert(typeof(row) == "number", `[Grid]: row must be a number`)
+	assert(typeof(column) == "number", `[Grid]: column must be a number`)
+
+	-- Check rather than assert as row/column = 0 possible for neighboring cells of cell on an edge
+	if column < 1 or column > configs.width or row < 1 or row > configs.height then
+		return nil
+	end
+
+	local cellIndex = (row - 1) * configs.width + column
+
+	return grid[cellIndex]
+end
+
+function Grid.getAllCellNeighbors(grid: { Cell }, configs: GridConfigs, cell: Cell): { NeighborEntry }
+	assert(typeof(grid) == "table", `[Grid]: grid must be a table`)
+	assert(typeof(cell) == "table", `[Grid]: cell must be a table`)
+	assert(typeof(configs.width) == "number", `[Grid]: Width must be a number`)
+	assert(typeof(configs.height) == "number", `[Grid]: Height must be a number`)
+
+	local neighborCells = {}
+
+	for _, directionVector in Grid.DIRECTION_VECTORS do
+		local neighborCell =
+			Grid.getCell(grid, configs, cell.row + directionVector.deltaY, cell.column + directionVector.deltaX)
+
+		if not neighborCell then
+			continue
+		end
+
+		table.insert(neighborCells, {
+			neighborCell = neighborCell,
+			direction = directionVector.direction,
+		})
+	end
+
+	return neighborCells
+end
+
+function Grid.getUnvisitedCellNeighbors(grid: { Cell }, configs: GridConfigs, cell: Cell): { NeighborEntry }
+	local unvisitedCellNeighbors = {}
+
+	for _, neighborEntry in Grid.getAllCellNeighbors(grid, configs, cell) do
+		if neighborEntry.neighborCell.visited then
+			continue
+		end
+
+		table.insert(unvisitedCellNeighbors, neighborEntry)
+	end
+
+	return unvisitedCellNeighbors
+end
+
+local BOUNDARY_DIRECTIONS: { { direction: Wall, isBoundary: (Cell, GridConfigs) -> boolean } } = {
+	{ direction = "North", isBoundary = function(cell) return cell.row == 1 end },
+	{ direction = "South", isBoundary = function(cell, configs) return cell.row == configs.height end },
+	{ direction = "West", isBoundary = function(cell) return cell.column == 1 end },
+	{ direction = "East", isBoundary = function(cell, configs) return cell.column == configs.width end },
+}
+
+export type BoundaryWallEntry = { cell: Cell, direction: Wall }
+
+function Grid.getBoundaryWallEntries(grid: { Cell }, configs: GridConfigs): { BoundaryWallEntry }
+	assert(typeof(grid) == "table", `[Grid]: grid must be a table`)
+
+	local boundaryWallEntries = {}
+
+	for _, cell in grid do
+		for _, boundaryDirection in BOUNDARY_DIRECTIONS do
+			if boundaryDirection.isBoundary(cell, configs) then
+				table.insert(boundaryWallEntries, { cell = cell, direction = boundaryDirection.direction })
+			end
+		end
+	end
+
+	return boundaryWallEntries
+end
+
+function Grid.removeBoundaryWall(cell: Cell, direction: Wall)
+	cell.walls[direction] = false
+end
+
+function Grid.carveEntrancesAndExits(grid: { Cell }, configs: GridConfigs, count: number, random: Random)
+	assert(typeof(grid) == "table", `[Grid]: grid must be a table`)
+	assert(typeof(count) == "number", `[Grid]: count must be a number`)
+
+	local boundaryWallEntries = Grid.getBoundaryWallEntries(grid, configs)
+	local openingsToCarve = math.min(count, #boundaryWallEntries)
+
+	for _ = 1, openingsToCarve do
+		local randomIndex = random:NextInteger(1, #boundaryWallEntries)
+		local boundaryWallEntry = table.remove(boundaryWallEntries, randomIndex) :: BoundaryWallEntry
+
+		Grid.removeBoundaryWall(boundaryWallEntry.cell, boundaryWallEntry.direction)
+	end
+end
+
+function Grid.removeWall(cellOne: Cell, cellTwo: Cell, direction: Wall)
+	assert(typeof(cellOne) == "table", `[Grid]: cell one must be a table`)
+	assert(typeof(cellTwo) == "table", `[Grid]: cell two must be a table`)
+	assert(typeof(direction) == "string", `[Grid]: direction must be a string`)
+
+	local oppositeDirection: Wall = OPPOSITE_MAPPING[direction]
+
+	cellOne.walls[direction] = false
+	cellTwo.walls[oppositeDirection] = false
+end
+
+function Grid.setVisited(cell: Cell, state: boolean)
+	cell.visited = state
+end
+
+function Grid.markVisited(cell: Cell)
+	Grid.setVisited(cell, true)
+end
+
+return Grid

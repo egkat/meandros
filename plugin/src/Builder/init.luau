@@ -1,0 +1,108 @@
+local Grid = require(script.Parent.Generators.Grid)
+local GridTypes = require(script.Parent.Generators.GridTypes)
+local BuilderTypes = require(script.BuilderTypes)
+local PartFactory = require(script.PartFactory)
+
+type Cell = GridTypes.Cell
+type Wall = GridTypes.Wall
+type GridConfigs = GridTypes.GridConfigs
+type BuilderConfigs = BuilderTypes.BuilderConfigs
+type BuildHandle = BuilderTypes.BuildHandle
+local Builder = {}
+
+function Builder.calculateCellCenter(cell: Cell, config: BuilderConfigs)
+	return (config.origin or Vector3.zero)
+		+ Vector3.new((cell.column - 1) * config.cellSize, 0, (cell.row - 1) * config.cellSize)
+end
+
+function Builder.buildWall(
+	cell: Cell,
+	direction: Wall,
+	cellCenter: Vector3,
+	builderConfigs: BuilderConfigs,
+	parent: Instance
+)
+	local correctDirectionVector = nil
+
+	for _, directionVector in Grid.DIRECTION_VECTORS do
+		if directionVector.direction == direction then
+			correctDirectionVector = directionVector
+			break
+		end
+	end
+
+	assert(correctDirectionVector, `[Builder:] unknown direction {correctDirectionVector}`)
+
+	local offset = Vector3.new(correctDirectionVector.deltaX, 0, correctDirectionVector.deltaY)
+		* (builderConfigs.cellSize / 2)
+	local position = cellCenter + offset + Vector3.new(0, builderConfigs.wallHeight / 2, 0)
+
+	local size = nil
+
+	if correctDirectionVector.deltaX ~= 0 then
+		size = Vector3.new(builderConfigs.wallThickness, builderConfigs.wallHeight, builderConfigs.cellSize + builderConfigs.wallThickness)
+	elseif correctDirectionVector.deltaY ~= 0 then
+		size = Vector3.new(builderConfigs.cellSize + builderConfigs.wallThickness, builderConfigs.wallHeight, builderConfigs.wallThickness)
+	end
+
+	assert(size, `[Builder:] unknown wall size {size}`)
+
+	return PartFactory.createPart(`Wall_{cell.row}_{cell.column}_{direction}`, CFrame.new(position), size, parent)
+end
+
+function Builder.buildFloor(gridConfigs: GridConfigs, builderConfigs: BuilderConfigs, parent: Instance)
+	local size = Vector3.new(
+		gridConfigs.width * builderConfigs.cellSize + builderConfigs.wallThickness,
+		builderConfigs.floorThickness,
+		gridConfigs.height * builderConfigs.cellSize + builderConfigs.wallThickness
+	)
+
+	local position = (builderConfigs.origin or Vector3.zero)
+		+ Vector3.new(
+			(gridConfigs.width - 1) * builderConfigs.cellSize / 2,
+			-builderConfigs.floorThickness / 2,
+			(gridConfigs.height - 1) * builderConfigs.cellSize / 2
+		)
+
+	return PartFactory.createPart("FloorPart", CFrame.new(position), size, parent)
+end
+
+function Builder.build(grid: { Cell }, gridConfigs: GridConfigs, builderConfigs: BuilderConfigs): BuildHandle
+	assert(typeof(grid) == "table", `[Builder]: grid must be a table`)
+	assert(typeof(gridConfigs) == "table", `[Builder]: gridConfigs must be a table`)
+	assert(typeof(builderConfigs) == "table", `[Builder]: builderConfigs must be a table`)
+	assert(typeof(builderConfigs.parent) == "Instance", `[Builder]: builderConfigs.parent must be an Instance`)
+
+	local parent = builderConfigs.parent
+	local parts = {}
+
+	table.insert(parts, Builder.buildFloor(gridConfigs, builderConfigs, parent))
+
+	for _, cell in grid do
+		local cellCenter = Builder.calculateCellCenter(cell, builderConfigs)
+
+		-- Let south walls always generate over north walls
+		if cell.walls.North and cell.row == 1 then
+			table.insert(parts, Builder.buildWall(cell, "North", cellCenter, builderConfigs, parent))
+		end
+
+		if cell.walls.South then
+			table.insert(parts, Builder.buildWall(cell, "South", cellCenter, builderConfigs, parent))
+		end
+
+		-- Let east walls always generate over west walls
+		if cell.walls.East then
+			table.insert(parts, Builder.buildWall(cell, "East", cellCenter, builderConfigs, parent))
+		end
+
+		if cell.walls.West and cell.column == 1 then
+			table.insert(parts, Builder.buildWall(cell, "West", cellCenter, builderConfigs, parent))
+		end
+	end
+
+	return {
+		parts = parts,
+	}
+end
+
+return Builder

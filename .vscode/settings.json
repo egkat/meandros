@@ -1,0 +1,8 @@
+{
+  "luau-lsp.sourcemap.rojoProjectFile": "dev.project.json",
+  "editor.formatOnSave": true,
+  "[luau]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua"
+  },
+  "files.autoSave": "onFocusChange"
+}

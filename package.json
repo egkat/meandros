@@ -1,0 +1,10 @@
+{
+  "name": "meandros",
+  "version": "0.1.0",
+  "scripts": {
+    "watch": "rojo build dev.project.json --plugin Meandros_Dev.rbxm --watch",
+    "build": "mkdir -p build && rojo build plugin.project.json -o build/Meandros.rbxm",
+    "install-release": "rojo build plugin.project.json --plugin Meandros.rbxm",
+    "test": "node tools/test.js"
+  }
+}
