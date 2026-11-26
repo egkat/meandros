@@ -4,5 +4,3 @@ build/
 *.rbxm
 .DS_Store
 sourcemap.json
-.claude/
-Commands.txt
