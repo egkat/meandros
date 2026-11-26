@@ -28,15 +28,3 @@ Generate customizable mazes in Roblox Studio in just a few clicks. Meandros give
 
 - New maze generation algorithms
 - Additional customization settings
-## Development
-
-Requires [Rokit](https://github.com/rojo-rbx/rokit) and VS Code (recommended extensions are suggested when you open the folder).
-
-```bash
-rokit install
-wally install
-npm run watch   # dev build, rebuilt into Studio's Plugins folder on every save
-npm run build   # release build → build/Meandros.rbxm
-```
-
-Turn on Studio's "reload plugins on file change" setting so the dev build (**Meandros (DEV)**) reloads on save. The dev and release builds can be installed side by side; see `CLAUDE.md` for how they differ.
