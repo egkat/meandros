@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://create.roblox.com/store/asset/105012030736581/Meandros">
+  <a href="https://create.roblox.com/store/asset/77914175311739/Maze-Generator-Meandros">
     <strong>Get Meandros Here</strong>
   </a>
 </p>
